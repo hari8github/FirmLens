@@ -210,7 +210,6 @@ FirmLens is positioned to evolve from a demo into a **serious financial intellig
 - Explainability over prediction  
 - Trust over speculation  
 - Relationships over raw data  
-- MVP first, scale later  
 
 ---
 
@@ -223,4 +222,4 @@ it helps them **understand why**.
 
 ---
 
-*Built with clarity. Scaled with intent.*
+
