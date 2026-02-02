@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FirmLens | Company Intelligence Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-serif { font-family: 'Lora', serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .insight-text { font-family: 'Lora', serif; line-height: 1.6; font-size: 1.125rem; }
+        .data-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; }
+        .tab-active { border-bottom: 2px solid #3b82f6; color: #111827; }
+        .tab-inactive { color: #6b7280; }
+        [data-lucide] { width: 1.25rem; height: 1.25rem; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col">
+    <!-- Navigation -->
+    <header class="sticky top-0 z-50 w-full border-b glass bg-white/80">
+        <div class="container mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-8">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold italic">F</div>
+                    <span class="text-xl font-bold tracking-tight">FirmLens</span>
+                </div>
+                <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-500">
+                    <a href="#" class="text-slate-900 transition-colors">Overview</a>
+                    <a href="#" class="hover:text-slate-900 transition-colors">Portfolio</a>
+                    <a href="#" class="hover:text-slate-900 transition-colors">Markets</a>
+                </nav>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="relative hidden sm:block">
+                    <i data-lucide="search" class="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400"></i>
+                    <input type="search" placeholder="Search companies..." class="pl-9 w-[200px] lg:w-[300px] h-9 bg-slate-100 rounded-md border-none text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <button class="px-4 py-1.5 border border-slate-200 rounded-md text-sm font-medium hover:bg-slate-50">Settings</button>
+            </div>
+        </div>
+    </header>
+    <main class="flex-1 container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Company Overview -->
+        <section class="mb-12">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <span id="company-sector" class="px-2.5 py-0.5 bg-slate-200 rounded-full text-xs font-medium">—</span>
+                        <span id="company-industry" class="px-2.5 py-0.5 border border-slate-200 rounded-full text-xs font-medium">—</span>
+                    </div>
+                    <h1 id="company-name" class="text-4xl font-extrabold tracking-tight lg:text-5xl mb-4">Loading…</h1>
+                    <p id="company-description" class="text-slate-500 max-w-2xl text-lg leading-relaxed">
+                        Fetching company details from Neo4j…
+                    </p>
+                    <div id="company-description-sources" class="mt-3 hidden flex flex-wrap gap-2 text-xs text-slate-500"></div>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <div class="bg-slate-100/50 p-4 rounded-xl min-w-[140px]">
+                        <span class="data-label block mb-1">Market Cap</span>
+                        <div id="kpi-market-cap" class="text-xl font-bold">—</div>
+                    </div>
+                    <div class="bg-slate-100/50 p-4 rounded-xl min-w-[140px]">
+                        <span class="data-label block mb-1">Last Q Rev</span>
+                        <div id="kpi-last-q-rev" class="text-xl font-bold">—</div>
+                    </div>
+                    <div class="bg-slate-100/50 p-4 rounded-xl min-w-[140px]">
+                        <span class="data-label block mb-1">P/E Ratio</span>
+                        <div id="kpi-pe" class="text-xl font-bold">58x</div>
+                    </div>
+                </div>
+            </div>
+            <!-- Tabs -->
+            <div class="w-full">
+                <div class="flex items-center justify-between border-b mb-8">
+                    <div class="flex gap-8">
+                        <button onclick="switchTab('financials')" id="tab-btn-financials" class="pb-4 px-2 font-medium text-sm transition-all tab-active">Financial Performance</button>
+                        <button onclick="switchTab('news')" id="tab-btn-news" class="pb-4 px-2 font-medium text-sm transition-all tab-inactive">Context & Events</button>
+                        <button onclick="switchTab('insights')" id="tab-btn-insights" class="pb-4 px-2 font-medium text-sm transition-all tab-inactive">Insights</button>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs font-medium text-slate-400 pb-4 hidden sm:flex">
+                        <i data-lucide="calendar" class="w-3 h-3"></i>
+                        Updated: Feb 2, 2026
+                    </div>
+                </div>
+                <!-- Financial Content -->
+                <div id="tab-financials" class="space-y-8 animate-in fade-in duration-500">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Quarterly Performance ($B)</h3>
+                                <i data-lucide="bar-chart-3" class="text-slate-400"></i>
+                            </div>
+                            <div class="h-[300px] w-full">
+                                <canvas id="performanceChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Profitability Trends (%)</h3>
+                                <i data-lucide="trending-up" class="text-slate-400"></i>
+                            </div>
+                            <div class="h-[300px] w-full">
+                                <canvas id="profitChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider mb-8">Annual Profit & Loss Overview</h3>
+                            <div id="annual-cards" class="grid grid-cols-1 md:grid-cols-3 gap-12">
+                                <div class="bg-slate-50 p-6 rounded-xl border border-dashed border-slate-300 flex flex-col justify-center items-center text-center">
+                                    <i data-lucide="activity" class="w-8 h-8 text-blue-500 mb-4 opacity-50"></i>
+                                    <p class="text-sm font-medium mb-1">Loading annuals…</p>
+                                    <p class="text-xs text-slate-500">Reading annual P&amp;L from Neo4j.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- News Content -->
+                <div id="tab-news" class="hidden space-y-8 animate-in fade-in duration-500">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
+                        <div id="news-list" class="lg:col-span-2 space-y-8">
+                            <div class="text-sm text-slate-500">Loading news…</div>
+                        </div>
+                        <div class="bg-blue-600 p-8 rounded-2xl text-white relative overflow-hidden self-start h-fit">
+                            <h3 class="text-lg font-bold mb-2">Event Correlation</h3>
+                            <p class="text-blue-100 text-sm mb-6">How recent Tata Elxsi events likely map to the latest financial moves.</p>
+                            <div class="space-y-4">
+                                <div class="p-4 bg-white/10 rounded-xl border border-white/10">
+                                    <p class="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-60">Q3 FY26: One-time labour law charge</p>
+                                    <p class="text-sm">
+                                        Net profit dropped sharply in Dec 2025 (latest quarter), while margins stayed in the low‑20s.
+                                        This pattern matches news reports calling out a one‑time labour law impact.
+                                    </p>
+                                </div>
+                                <div class="p-4 bg-white/10 rounded-xl border border-white/10">
+                                    <p class="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-60">Broker views: valuation + downside risk</p>
+                                    <p class="text-sm">
+                                        Multiple articles highlight split brokerage opinions and downside risk despite stable sales.
+                                        This aligns with “results are okay, but expectations/valuation drive sentiment.”
+                                    </p>
+                                </div>
+                                <div class="p-4 bg-white/10 rounded-xl border border-white/10">
+                                    <p class="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-60">Semiconductor Mission 2.0 tailwind</p>
+                                    <p class="text-sm">
+                                        Policy push around semiconductors can improve long‑term demand for design/engineering services.
+                                        Expect impact to be gradual (more of a medium‑term narrative than an immediate quarterly jump).
+                                    </p>
+                                </div>
+                                <div class="p-4 bg-white/10 rounded-xl border border-white/10">
+                                    <p class="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-60">Sector context: IT growth reset</p>
+                                    <p class="text-sm">
+                                        Broader IT commentary suggests margin improvement but muted growth expectations.
+                                        That context helps explain why revenue can look steady while profit/margins face pressure.
+                                    </p>
+                                </div>
+                            </div>
+                            <i data-lucide="layers" class="absolute -bottom-10 -right-10 w-40 h-40 opacity-10 rotate-12"></i>
+                        </div>
+                    </div>
+                </div>
+                <!-- Insights Content -->
+                <div id="tab-insights" class="hidden animate-in fade-in duration-500 max-w-3xl mx-auto py-8">
+                    <div class="space-y-12">
+                        <div class="pl-8 border-l-2 border-blue-200 relative">
+                            <div class="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-blue-600"></div>
+                            <h3 class="text-2xl font-bold mb-6">Margins compressed into the latest quarter</h3>
+                            <div class="space-y-6">
+                                <div>
+                                    <span class="data-label block mb-2">What we observed</span>
+                                    <p class="insight-text italic">"Operating margin has moved down from the high‑20s to low‑20s across recent quarters, with the latest quarter (Dec 2025) staying around the low‑20% range."</p>
+                                </div>
+                                <div>
+                                    <span class="data-label block mb-2">Why it matters</span>
+                                    <p class="text-slate-500 text-lg leading-relaxed">Even if revenue is relatively steady, margin compression reduces operating leverage and makes earnings more sensitive to one‑off costs or demand softness.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pl-8 border-l-2 border-blue-200 relative">
+                            <div class="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-blue-600"></div>
+                            <h3 class="text-2xl font-bold mb-6">Profit fell faster than revenue (latest quarter impact)</h3>
+                            <div class="space-y-6">
+                                <div>
+                                    <span class="data-label block mb-2">What we observed</span>
+                                    <p class="insight-text italic">"Net profit drops sharply in the latest quarter while sales are comparatively stable."</p>
+                                </div>
+                                <div>
+                                    <span class="data-label block mb-2">Why it matters</span>
+                                    <p class="text-slate-500 text-lg leading-relaxed">News coverage flags a one‑time labour law charge in Q3, which is consistent with a step-down in profit without a matching collapse in sales.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pl-8 border-l-2 border-blue-200 relative">
+                            <div class="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-blue-600"></div>
+                            <h3 class="text-2xl font-bold mb-6">Medium‑term story: growth + valuations drive sentiment</h3>
+                            <div class="space-y-6">
+                                <div>
+                                    <span class="data-label block mb-2">What we observed</span>
+                                    <p class="insight-text italic">"Articles around results mix cautious growth expectations with valuation commentary (including downside-risk mentions)."</p>
+                                </div>
+                                <div>
+                                    <span class="data-label block mb-2">Why it matters</span>
+                                    <p class="text-slate-500 text-lg leading-relaxed">When growth expectations reset, the same financial results can be interpreted very differently. Policy tailwinds (like Semiconductor Mission 2.0) can improve the narrative, but typically show up gradually in numbers.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    <!-- Chat -->
+    <div id="chat-container" class="fixed bottom-6 right-6 z-50 transition-all duration-300 w-auto">
+        <button id="chat-toggle" class="w-14 h-14 bg-blue-600 rounded-full shadow-xl flex items-center justify-center text-white hover:scale-105 transition-transform">
+            <i data-lucide="message-square"></i>
+        </button>
+        <div id="chat-box" class="hidden w-[350px] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[500px]">
+            <div class="bg-blue-600 p-4 text-white flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="message-square" class="w-5 h-5"></i>
+                    <span class="font-bold">FirmLens Assistant</span>
+                </div>
+                <button onclick="toggleChat()" class="hover:bg-white/20 rounded p-1">
+                    <i data-lucide="chevron-down"></i>
+                </button>
+            </div>
+            <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-4">
+                <div class="bg-slate-100 p-3 rounded-2xl rounded-tl-none text-sm max-w-[85%]">
+                    Hello! I’m your FirmLens assistant. Ask me about Tata Elxsi’s financials and recent events.
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button class="quick-prompt px-3 py-1 border border-slate-200 rounded-full text-[10px] font-medium hover:bg-slate-50">Why did net profit fall in the latest quarter?</button>
+                    <button class="quick-prompt px-3 py-1 border border-slate-200 rounded-full text-[10px] font-medium hover:bg-slate-50">Show quarterly sales and OPM trend.</button>
+                </div>
+            </div>
+            <div class="p-4 border-t bg-slate-50">
+                <div class="relative">
+                    <input id="chat-input" type="text" placeholder="Ask about the data..." class="w-full pl-4 pr-10 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                    <button id="chat-send" class="absolute right-2 top-2 text-blue-600">
+                        <i data-lucide="chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer class="bg-slate-100 py-12 border-t mt-auto">
+        <div class="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6 text-sm text-slate-400">
+            <div class="flex items-center gap-2">
+                <span class="font-bold text-slate-900 text-lg">FirmLens</span>
+                <span>&copy; 2026 Company Intelligence</span>
+            </div>
+            <div class="flex gap-8">
+                <a href="#" class="hover:text-slate-900">Terms</a>
+                <a href="#" class="hover:text-slate-900">Privacy</a>
+                <a href="#" class="hover:text-slate-900">API</a>
+            </div>
+        </div>
+    </footer>
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+        function formatCr(val) {
+            if (val === null || val === undefined) return "—";
+            return `₹ ${Number(val).toLocaleString("en-IN")} Cr`;
+        }
+
+        function formatNum(val) {
+            if (val === null || val === undefined) return "—";
+            return Number(val).toLocaleString("en-IN");
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return "—";
+            // dateStr can be "YYYY-MM-DD" or ISO string
+            const d = new Date(dateStr);
+            if (Number.isNaN(d.getTime())) return dateStr;
+            return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" });
+        }
+
+        function badgeClass(eventType) {
+            const t = (eventType || "").toLowerCase();
+            if (t === "earnings") return "bg-blue-100 text-blue-700";
+            if (t === "regulation") return "bg-amber-100 text-amber-700";
+            if (t === "market_opinion") return "bg-purple-100 text-purple-700";
+            if (t === "business_update") return "bg-emerald-100 text-emerald-700";
+            return "bg-slate-200 text-slate-700";
+        }
+
+        let performanceChart;
+        let profitChart;
+
+        function renderCharts(quarterly) {
+            const labels = quarterly.map(q => q.label);
+            const sales = quarterly.map(q => q.sales);
+            const opProfit = quarterly.map(q => q.operating_profit);
+            const margins = quarterly.map(q => q.opm_percent);
+
+            if (performanceChart) performanceChart.destroy();
+            if (profitChart) profitChart.destroy();
+
+            performanceChart = new Chart(document.getElementById('performanceChart'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Sales (₹ Cr)', data: sales, backgroundColor: '#3b82f6', borderRadius: 4 },
+                        { label: 'Op. Profit (₹ Cr)', data: opProfit, backgroundColor: '#93c5fd', borderRadius: 4 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { grid: { display: false } }, x: { grid: { display: false } } } }
+            });
+
+            profitChart = new Chart(document.getElementById('profitChart'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{ label: 'OPM (%)', data: margins, borderColor: '#3b82f6', tension: 0.3, pointBackgroundColor: '#3b82f6' }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { grid: { display: false } }, x: { grid: { display: false } } } }
+            });
+        }
+
+        function renderAnnual(annual) {
+            const container = document.getElementById("annual-cards");
+            container.innerHTML = "";
+
+            if (!annual || annual.length === 0) {
+                container.innerHTML = `<div class="text-sm text-slate-500">No annual data found.</div>`;
+                return;
+            }
+
+            // Show up to 2 year cards + one comparison card (keeps existing layout vibe)
+            const cards = annual.slice(-2);
+            cards.forEach(a => {
+                const el = document.createElement("div");
+                el.className = "space-y-4";
+                el.innerHTML = `
+                    <h4 class="text-lg font-bold border-b pb-2">${a.label || a.period_end}</h4>
+                    <div class="space-y-3">
+                        <div class="flex justify-between text-sm"><span class="text-slate-500">Total Revenue</span><span class="font-mono font-medium">₹ ${formatNum(a.sales)} Cr</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-slate-500">Operating Profit</span><span class="font-mono font-medium">₹ ${formatNum(a.operating_profit)} Cr</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-slate-500">Net Profit</span><span class="font-mono font-medium">₹ ${formatNum(a.net_profit)} Cr</span></div>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+
+            const comp = document.createElement("div");
+            comp.className = "bg-slate-50 p-6 rounded-xl border border-dashed border-slate-300 flex flex-col justify-center items-center text-center";
+            comp.innerHTML = `
+                <i data-lucide="activity" class="w-8 h-8 text-blue-500 mb-4 opacity-50"></i>
+                <p class="text-sm font-medium mb-1">Comparative Analysis</p>
+                <p class="text-xs text-slate-500">Annual trends loaded from Neo4j.</p>
+            `;
+            container.appendChild(comp);
+            lucide.createIcons();
+        }
+
+        function renderNews(news) {
+            const container = document.getElementById("news-list");
+            container.innerHTML = "";
+
+            if (!news || news.length === 0) {
+                container.innerHTML = `<div class="text-sm text-slate-500">No news found.</div>`;
+                return;
+            }
+
+            news.forEach(n => {
+                const article = document.createElement("article");
+                article.className = "group pb-8 border-b border-slate-100 last:border-0";
+                const date = n.published_at ? formatDate(n.published_at) : "—";
+                const tag = (n.event_type || "general").replace(/_/g, " ");
+                article.innerHTML = `
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="text-xs font-mono text-slate-400">${date}</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${badgeClass(n.event_type)}">${tag}</span>
+                    </div>
+                    <a href="${n.url || "#"}" target="_blank" rel="noreferrer" class="block">
+                        <h3 class="text-xl font-bold mb-3 group-hover:text-blue-600 transition-colors cursor-pointer">${n.title || "Untitled"}</h3>
+                    </a>
+                    <p class="text-slate-500 leading-relaxed">${n.summary || ""}</p>
+                    <div class="mt-2 text-xs text-slate-400">${n.source || ""}</div>
+                `;
+                container.appendChild(article);
+            });
+        }
+
+        async function loadFromNeo4j() {
+            const companiesResp = await fetch("/api/companies");
+            const companiesJson = await companiesResp.json();
+            const companies = companiesJson.companies || [];
+            const companyId = (companies[0] && companies[0].company_id) ? companies[0].company_id : null;
+
+            if (!companyId) {
+                document.getElementById("company-name").textContent = "No companies found in Neo4j";
+                document.getElementById("company-description").textContent = "Run the ingestion script first to load data.";
+                return;
+            }
+            // Store for chatbot requests
+            window.currentCompanyId = companyId;
+
+            const overviewResp = await fetch(`/api/company/${encodeURIComponent(companyId)}/overview?newsLimit=10`);
+            const overview = await overviewResp.json();
+
+            const c = overview.company || {};
+            const q = overview.quarterly || [];
+            const a = overview.annual || [];
+            const n = overview.news || [];
+
+            document.getElementById("company-name").textContent = c.name || companyId;
+            document.getElementById("company-sector").textContent = c.sector || "—";
+            document.getElementById("company-industry").textContent = c.industry || "—";
+
+            const descEl = document.getElementById("company-description");
+            const sourcesEl = document.getElementById("company-description-sources");
+            const desc = (c.description || "").trim();
+            if (desc) {
+                descEl.textContent = desc;
+            } else {
+                descEl.textContent = "No company description available yet. Re-run ingestion to store the description from Screener.";
+            }
+
+            const sources = Array.isArray(c.description_sources) ? c.description_sources : [];
+            if (sources.length > 0) {
+                sourcesEl.classList.remove("hidden");
+                sourcesEl.innerHTML = `<span class="font-medium">Sources:</span>`;
+                sources.forEach((href, idx) => {
+                    const a = document.createElement("a");
+                    a.href = href;
+                    a.target = "_blank";
+                    a.rel = "noreferrer";
+                    a.className = "px-2 py-1 rounded-full border border-slate-200 hover:bg-slate-50";
+                    a.textContent = `Link ${idx + 1}`;
+                    sourcesEl.appendChild(a);
+                });
+            } else {
+                sourcesEl.classList.add("hidden");
+                sourcesEl.innerHTML = "";
+            }
+
+            document.getElementById("kpi-market-cap").textContent = formatCr(c.market_cap_cr);
+            // "Last Q Rev" uses latest quarterly sales
+            if (q.length > 0) {
+                const last = q[q.length - 1];
+                document.getElementById("kpi-last-q-rev").textContent = `₹ ${formatNum(last.sales)} Cr`;
+            } else {
+                document.getElementById("kpi-last-q-rev").textContent = "—";
+            }
+            // Hardcoded for now
+            document.getElementById("kpi-pe").textContent = "58x";
+
+            renderCharts(q);
+            renderAnnual(a);
+            renderNews(n);
+        }
+
+        // Kick off data load
+        loadFromNeo4j().catch(err => {
+            console.error(err);
+            document.getElementById("company-name").textContent = "Failed to load data";
+            document.getElementById("company-description").textContent = "Check that the backend is running and Neo4j is reachable.";
+        });
+
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            const tabs = ['financials', 'news', 'insights'];
+            tabs.forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                document.getElementById(`tab-btn-${t}`).classList.remove('tab-active');
+                document.getElementById(`tab-btn-${t}`).classList.add('tab-inactive');
+            });
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            document.getElementById(`tab-btn-${tabId}`).classList.remove('tab-inactive');
+            document.getElementById(`tab-btn-${tabId}`).classList.add('tab-active');
+        }
+        // Chat Toggle
+        const chatToggle = document.getElementById('chat-toggle');
+        const chatBox = document.getElementById('chat-box');
+        const chatContainer = document.getElementById('chat-container');
+        function toggleChat() {
+            if (chatBox.classList.contains('hidden')) {
+                chatBox.classList.remove('hidden');
+                chatToggle.classList.add('hidden');
+                chatContainer.style.width = '350px';
+            } else {
+                chatBox.classList.add('hidden');
+                chatToggle
+.classList.remove('hidden');
+chatContainer.style.width = 'auto';
+}
+}
+chatToggle.addEventListener('click', toggleChat);
+
+        // -------------------------
+        // Chatbot (MVP)
+        // -------------------------
+        const chatMessages = document.getElementById("chat-messages");
+        const chatInput = document.getElementById("chat-input");
+        const chatSend = document.getElementById("chat-send");
+
+        function appendMessage(role, text) {
+            const wrap = document.createElement("div");
+            if (role === "user") {
+                wrap.className = "bg-blue-600 text-white p-3 rounded-2xl rounded-tr-none text-sm max-w-[85%] ml-auto";
+            } else {
+                wrap.className = "bg-slate-100 p-3 rounded-2xl rounded-tl-none text-sm max-w-[85%]";
+            }
+            wrap.textContent = text;
+            chatMessages.appendChild(wrap);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function sendChat(message) {
+            const companyId = window.currentCompanyId;
+            if (!companyId) {
+                appendMessage("assistant", "No company loaded yet. Please refresh after data loads.");
+                return;
+            }
+
+            appendMessage("user", message);
+            chatInput.value = "";
+
+            // simple loading bubble
+            const loading = document.createElement("div");
+            loading.className = "bg-slate-100 p-3 rounded-2xl rounded-tl-none text-sm max-w-[85%]";
+            loading.textContent = "Thinking…";
+            chatMessages.appendChild(loading);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                const resp = await fetch("/api/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ company_id: companyId, message })
+                });
+                const data = await resp.json();
+                loading.remove();
+                appendMessage("assistant", (data && data.reply) ? data.reply : "No reply.");
+            } catch (e) {
+                loading.remove();
+                appendMessage("assistant", "Chat failed. Check server logs and GROQ_API_KEY.");
+            }
+        }
+
+        function wireQuickPrompts() {
+            document.querySelectorAll(".quick-prompt").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const txt = (btn.textContent || "").trim();
+                    if (txt) sendChat(txt);
+                });
+            });
+        }
+        wireQuickPrompts();
+
+        chatSend.addEventListener("click", () => {
+            const msg = (chatInput.value || "").trim();
+            if (msg) sendChat(msg);
+        });
+        chatInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                const msg = (chatInput.value || "").trim();
+                if (msg) sendChat(msg);
+            }
+        });
+</script>
+
+</body> </html>
